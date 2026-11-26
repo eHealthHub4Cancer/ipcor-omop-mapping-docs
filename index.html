@@ -67,6 +67,13 @@
   strong{color:var(--ink); font-weight:600;}
   code{font-family:var(--mono); font-size:.86em; background:var(--code-bg); color:var(--code-ink);
     padding:1px 5px; border-radius:4px;}
+  pre.cmd{font-family:var(--mono); font-size:.82rem; line-height:1.55; background:var(--code-bg);
+    color:var(--code-ink); border:1px solid var(--border); border-radius:10px; padding:14px 16px;
+    overflow-x:auto; margin:14px 0;}
+  pre.cmd .c{color:var(--muted);}
+  .pathcard{border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:10px;
+    background:var(--surface); padding:14px 18px; margin:14px 0;}
+  .pathcard h4{margin:0 0 6px; font-family:var(--sans); font-size:1.02rem; color:var(--accent-ink);}
   ul{margin:14px 0; padding-left:0; list-style:none; max-width:66ch;}
   ul li{position:relative; padding-left:22px; margin:9px 0;}
   ul li::before{content:""; position:absolute; left:4px; top:11px; width:6px; height:6px; border-radius:50%;
@@ -330,26 +337,99 @@
     <p>Several further decisions were confirmed with the registry and are in the code: visit-date semantics (treatment and biopsy dates are real attendance, while PSA and MRI dates are result-recorded and approximate), instance ordering (entry order, not chronological, so records are sorted by date), a diagnosis-date definition change handled by a cutoff rule, the 300 versus 302 cohort exclusion by configuration, and a few confirmed real-world column-name variants.</p>
 
     <h2 id="run"><span class="n">10</span>How to run the pipeline</h2>
-    <p>There are two ways to run it; both keep the patient data on the local machine.</p>
+    <p>There are three ways to run it, and a tour of the tools they open. Every path keeps the patient data on the local machine.</p>
     <figure class="fig"><svg xmlns="http://www.w3.org/2000/svg" width="1180" height="250" viewBox="0 0 1180 250" font-family="Arial, Helvetica, sans-serif"><defs>
   <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
     <path d="M0,0 L10,5 L0,10 z" fill="#9fb3ad"/></marker>
   <marker id="aht" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
     <path d="M0,0 L10,5 L0,10 z" fill="#0b6e6e"/></marker>
 </defs><rect width="1180" height="250" rx="14" fill="#eef3f1"/><text x="26" y="34" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#1f2a44" text-anchor="start">Running the dockerised appliance</text><rect x="20" y="70" width="160" height="92" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="20" y="70" width="5" height="92" rx="2.5" fill="#0b6e6e"/><text x="100" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Install Docker</text><text x="100" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Desktop (once)</text><circle cx="40" cy="68" r="15" fill="#0b6e6e"/><text x="40" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">1</text><line x1="186" y1="116" x2="210" y2="116" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="216" y="70" width="160" height="92" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="216" y="70" width="5" height="92" rx="2.5" fill="#0b6e6e"/><text x="296" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Double-click</text><text x="296" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Start</text><circle cx="236" cy="68" r="15" fill="#0b6e6e"/><text x="236" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">2</text><line x1="382" y1="116" x2="406" y2="116" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="412" y="70" width="160" height="92" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="412" y="70" width="5" height="92" rx="2.5" fill="#0b6e6e"/><text x="492" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Pull images</text><text x="492" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">first run, a few GB</text><circle cx="432" cy="68" r="15" fill="#0b6e6e"/><text x="432" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">3</text><line x1="578" y1="116" x2="602" y2="116" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="608" y="70" width="160" height="92" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="608" y="70" width="5" height="92" rx="2.5" fill="#0b6e6e"/><text x="688" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Upload 5 CSVs</text><text x="688" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">in the mapper</text><circle cx="628" cy="68" r="15" fill="#0b6e6e"/><text x="628" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">4</text><line x1="774" y1="116" x2="798" y2="116" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="804" y="70" width="160" height="92" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="804" y="70" width="5" height="92" rx="2.5" fill="#0b6e6e"/><text x="884" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Build the</text><text x="884" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">OMOP CDM</text><circle cx="824" cy="68" r="15" fill="#0b6e6e"/><text x="824" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">5</text><line x1="970" y1="116" x2="994" y2="116" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="1000" y="70" width="160" height="92" rx="10" ry="10" fill="#dfeeec" stroke="#cdd6d2" stroke-width="1.6"/><rect x="1000" y="70" width="5" height="92" rx="2.5" fill="#0a5a5a"/><text x="1080" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Explore or</text><text x="1080" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Start-research</text><circle cx="1020" cy="68" r="15" fill="#0b6e6e"/><text x="1020" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">6</text><text x="590" y="232" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="600" fill="#5a6472" text-anchor="middle">RStudio (:8787) and JupyterLab (:8888) open with Start-research, preconnected to the CDM.</text></svg><figcaption>Running the sealed appliance: install Docker, double-click Start, map and build, then explore or open the research tools.</figcaption></figure>
-    <h3>The turnkey appliance (recommended)</h3>
-    <p>A sealed, double-click deployment requiring only Docker Desktop. Unzip the starter package and double-click <strong>Start</strong>; a browser opens the mapper. No repository, no code, no login, the images pull from a public registry on first run.</p>
+    <h3>Three ways to run it</h3>
+    <p>Pick by what you want: build the data with no code (the toolkit), run the pipeline from the cloned repository in containers (Docker), or run it with your own Python, PostgreSQL and R (manual).</p>
+
+    <div class="pathcard">
+      <h4>1. The toolkit (no code)</h4>
+      <p>The sealed, double-click appliance. Install Docker Desktop once, then:</p>
+      <ul>
+        <li>Double-click <strong>Start</strong> (<code>start.command</code> on Mac, <code>start.bat</code> on Windows). The first run pulls about 3 GB and loads the vocabulary (5 to 15 minutes).</li>
+        <li>The browser opens the <strong>mapper at <code>localhost:8501</code></strong>. Upload the five CSVs, let them validate, click <strong>Build OMOP CDM</strong>, then download the tables.</li>
+        <li>The <strong>dashboard</strong> is at <code>localhost:8050</code>. Double-click <strong>Start-research</strong> to add RStudio and JupyterLab.</li>
+        <li><strong>Stop</strong> keeps the database; <strong>Update</strong> pulls the newest image, then re-run Build.</li>
+      </ul>
+    </div>
+
+    <div class="pathcard">
+      <h4>2. Pipeline in Docker (from the repository)</h4>
+      <p>PostgreSQL and the Python + R toolchain come preinstalled. The container database is published on host port <code>5433</code>.</p>
+      <pre class="cmd">cp .env.example .env            <span class="c"># database credentials</span>
+./docker/dump_vocab.sh          <span class="c"># copy the OMOP vocabulary in</span>
+docker compose build            <span class="c"># first build compiles the R packages</span>
+docker compose up -d postgres   <span class="c"># first start loads the vocabulary</span>
+
+docker compose run --rm app python main.py --stage staging   <span class="c"># load the CSVs</span>
+docker compose run --rm app python main.py --stage vocab     <span class="c"># load + check mappings</span>
+docker compose run --rm app python main.py --stage cdm       <span class="c"># build the CDM</span>
+docker compose run --rm app python main.py --verify          <span class="c"># row counts</span>
+
+docker compose run --rm app bash -lc 'cd dqd &amp;&amp; Rscript run_dqd.R'   <span class="c"># data quality</span>
+docker compose down             <span class="c"># stop; data is kept</span></pre>
+      <p>Whole thing in one shot: <code>docker compose run --rm app python main.py</code>. Dashboard: <code>docker compose up -d dashboard</code>, then <code>localhost:8050</code>.</p>
+    </div>
+
+    <div class="pathcard">
+      <h4>3. Pipeline, normal install</h4>
+      <p>Needs Python 3, a PostgreSQL carrying the OMOP vocabulary, and R with the OHDSI packages for the R steps.</p>
+      <pre class="cmd">python3 -m venv venv &amp;&amp; source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env            <span class="c"># fill in your DB details</span>
+
+python main.py                  <span class="c"># full pipeline: staging to vocab to cdm</span>
+python -m src.schema.cdm_manager --reload      <span class="c"># rebuild CDM tables</span>
+python -m src.validation.mapping_validator     <span class="c"># check concepts are standard</span>
+cd dqd &amp;&amp; Rscript run_dqd.R                      <span class="c"># data quality dashboard</span></pre>
+      <p>No extract? Generate a synthetic one with <code>python -m synthetic.generate --n 200 --out synthetic/out --seed 42</code>, then run any path against that folder.</p>
+    </div>
+
+    <div class="tablewrap"><table>
+      <thead><tr><th>Port</th><th>Service</th><th>Login</th></tr></thead>
+      <tbody>
+        <tr><td><code>8501</code></td><td>Mapper (toolkit)</td><td>none</td></tr>
+        <tr><td><code>8050</code></td><td>Dashboard</td><td>none</td></tr>
+        <tr><td><code>8787</code></td><td>RStudio (workbench)</td><td><code>rstudio</code> / password</td></tr>
+        <tr><td><code>8888</code></td><td>JupyterLab (workbench)</td><td>token</td></tr>
+        <tr><td><code>5433</code></td><td>Container PostgreSQL (Docker path)</td><td>from <code>.env</code></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>A tour of the tools</h3>
+    <p>Three tools open in the browser. The mapper builds the data, the dashboard reads it, and the workbench is for writing your own code. Nothing uploads your data anywhere.</p>
+
+    <p><strong>The mapper</strong> (<code>localhost:8501</code>), the tool that turns the CSVs into the OMOP database:</p>
     <ul>
-      <li><strong>Start</strong> → the mapper opens.</li>
-      <li><strong>Map &amp; build</strong> → upload the five CSVs, validate, click Build, download the OMOP tables.</li>
-      <li><strong>Explore</strong> → the dashboard (overview, pathways, cohort builder, query builder, SQL console) opens alongside.</li>
-      <li><strong>Analyse with code</strong> → double-click <strong>Start-research</strong> for RStudio Server and JupyterLab, preconnected to the CDM.</li>
-      <li><strong>Stop / Update</strong> → Stop keeps the database; Update pulls the newest image.</li>
+      <li><strong>Build CDM</strong>, the everyday job top to bottom: upload the five files, check them (it flags a missing file or column), build the CDM, then download the finished tables and see any variables that were not mapped.</li>
+      <li><strong>Data quality</strong>, runs the OHDSI Data Quality Dashboard on what you just built and shows the pass rate and the failing checks.</li>
+      <li><strong>Data model</strong>, a plain explainer of how the registry forms relate to the OMOP tables. For understanding, not for doing.</li>
+      <li>Two maintainer-only tabs appear for people editing the mappings: <strong>Author mappings</strong> (point and click a standard concept for each value a field takes) and <strong>Add a field</strong> (bring a new source field in). Most users never touch these.</li>
     </ul>
-    <h3>The developer route</h3>
-    <p>The same pipeline runs from the repository: a PostgreSQL database with the vocabulary loaded, the Python ETL in stages (<code>staging → vocab → cdm</code>) with the derived tables built automatically, the R steps for observation_period and the DQD, and the Dash dashboard over the result.</p>
-    <h3>The research workbench</h3>
-    <p>This is where an external OHDSI study runs against the data. RStudio Server is the native home for an R study package; JupyterLab offers the same connection in Python or R. Both read the connection from the environment, so a researcher opens a seeded script and runs it with no configuration. Because they execute arbitrary code against the CDM, they are login-gated, and any external study package is reviewed before it is run.</p>
+
+    <p><strong>The dashboard</strong> (<code>localhost:8050</code>), a read-only analysis workspace over the built CDM:</p>
+    <ul>
+      <li><strong>Overview</strong>, the headline numbers and the main distributions (age, first-line treatment, lines of therapy). Start here.</li>
+      <li><strong>Treatment</strong>, pick a patient to see their treatment journey over time and lines of therapy, plus cohort views like PSA bands, surveillance switches and grade changes.</li>
+      <li><strong>Cohort builder</strong>, tick criteria (sex, first-line, number of lines, age, must-have flags) and watch the matching cohort size update live.</li>
+      <li><strong>Data explorer</strong>, open any ready-made table, filter it on any column, export to CSV.</li>
+      <li><strong>Query builder</strong>, the no-code companion to the console: pick a table, columns and filters by clicking, export to CSV. No SQL needed.</li>
+      <li><strong>SQL console</strong>, for technical users who want to write their own read-only SQL; every query is vetted before it runs.</li>
+      <li><strong>Research questions</strong>, the project's headline questions answered on your own cohort.</li>
+      <li><strong>Data quality</strong>, the OHDSI DQD results for the current CDM, exportable as CSV.</li>
+    </ul>
+
+    <p><strong>The research workbench</strong> (opt-in), for writing your own analysis code against the CDM, already connected so there is no setup:</p>
+    <ul>
+      <li><strong>RStudio</strong> (<code>localhost:8787</code>), the OHDSI R environment. Run an OHDSI study package or a feasibility count; the database connection is already built and a ready-to-run example is waiting.</li>
+      <li><strong>JupyterLab</strong> (<code>localhost:8888</code>), the same in Python or R notebooks, for quick exploration, also with a runnable example.</li>
+    </ul>
+    <p>Build the CDM in the mapper first, or the examples return nothing. Because these run real code against the data, they are login-gated and any external study package is reviewed before it is run.</p>
 
     <h2 id="quality"><span class="n">11</span>Data quality &amp; known limitations</h2>
     <p>The built CDM passes the OHDSI Data Quality Dashboard's checks, which can be re-run on demand from the mapper. Limitations worth stating plainly:</p>
