@@ -282,7 +282,7 @@
         <tr><td>Patient-reported outcomes (<code>proms.csv</code>)</td><td>The baseline EPIC-26 value set is mapped in Usagi (the worklists exist), but the PROMs transformer is not yet wired into the pipeline. Only the baseline survey carries data; demographics and 6-month follow-up are empty and map when data arrives.</td></tr>
         <tr><td>Pointer / index fields</td><td>Fields such as the diagnosis PSA-level pointer are positional indices into a series, not values; not mapped to a concept by design.</td></tr>
         <tr><td>Fields awaiting an IPCOR value crosswalk</td><td>A few treatment values (and cause of death) are kept as source strings and resolve once IPCOR confirms their value list.</td></tr>
-        <tr><td>Fields absent from the extract</td><td>Some dictionary fields are not present at all (the surveillance-type field separating active surveillance from watchful waiting; the specific ADT agent/dose/date). These cannot be mapped until provided.</td></tr>
+        <tr><td>Fields absent from the extract</td><td>A few dictionary fields are not yet in the extract and are pre-wired to populate when supplied (for example the ADT primary-or-salvage and stop-reason fields). ADT dose is not collected by the registry at all. The surveillance-type field and the specific ADT agent and dates are present and are mapped.</td></tr>
         <tr><td>No-suitable-concept fields</td><td>Where no standard concept fits, the value is kept with <code>concept_id = 0</code> and the original preserved, rather than forcing a misleading concept.</td></tr>
       </tbody>
     </table></div>
@@ -322,8 +322,8 @@
         <tr><td>What the numeric facility codes mean.</td><td>IPCOR confirmed the numeric code is the index of the institute in the Institute sub-form (1 is the first institute, 2 the second, and so on), so the facility is resolved from the sub-form and the codes are read as positional pointers. The Hospital and Institute names are pseudonyms, so each real facility maps to one care_site.</td></tr>
         <tr><td>What the biopsy MRIDetails code represents.</td><td>IPCOR confirmed it is the index of the MRI scan in the MRI sub-form (1 is MRI 1, 2 is MRI 2), so it is a positional pointer into the sub-form rather than a clinical result, and is not mapped as a concept.</td></tr>
         <tr><td>Whether PSALevel is a PSA value or a code.</td><td>IPCOR confirmed PSALevel is the index of the PSA test in the PSA sub-form (1 is PSA 1, 2 is PSA 2), so it is a positional pointer, not a PSA value. The canonical numeric PSA is taken from the sub-form, and PSALevel is not mapped as a measurement.</td></tr>
-        <tr><td>Why the surveillance-type field is absent.</td><td>IPCOR confirmed the surveillance-type field was not in the variable list that had been requested, and can be added on request. Until then watchful waiting and active surveillance are mapped to a single provisional concept, and the field is pre-wired so the two separate automatically once it is supplied.</td></tr>
-        <tr><td>Why ADT has no specific agent.</td><td>IPCOR confirmed the ADT agent field was not in the requested variable list, and can be added on request. ADT is mapped at the recorded granularity, with the agent, dose and date fields pre-wired to populate once supplied.</td></tr>
+        <tr><td>Whether active surveillance and watchful waiting can be told apart in the extract.</td><td>The surveillance-type field (WWASType) was not in the first requested variable list but is present in the current extract. Active surveillance and watchful waiting are recorded distinctly (73 and 6 records) and map to separate standard concepts, each with its date and treating clinician, so the two are not collapsed.</td></tr>
+        <tr><td>Whether the specific ADT agent and the ADT dates are available.</td><td>The ADT agent and dates were not in the first requested variable list but are present in the current extract. The specific agent (for example bicalutamide, relugolix or triptorelin) is recorded and maps to a standard drug ingredient in DRUG_EXPOSURE, with the start and stop dates; agents recorded as &quot;Other&quot; are kept as the source value. ADT dose is not collected by the registry, so no dose is recorded.</td></tr>
         <tr><td>Whether radiotherapy delivered at specialist centres is captured.</td><td>IPCOR confirmed that care delivered at non-recruiting sites, including St. Luke&#x27;s radiation-oncology network, is captured, with the treating facility recorded in each treatment form. Radiotherapy is therefore not under-recorded because of site coverage.</td></tr>
       </tbody>
     </table></div>
@@ -354,11 +354,11 @@
     <h2 id="quality"><span class="n">11</span>Data quality &amp; known limitations</h2>
     <p>The built CDM passes the OHDSI Data Quality Dashboard's checks, which can be re-run on demand from the mapper. Limitations worth stating plainly:</p>
     <ul>
-      <li>Externally delivered radiotherapy may be under-recorded if provided at non-participating centres (Q&amp;A 10).</li>
-      <li>ADT is captured only as "Chemical", without a specific agent, dose or date (Q&amp;A 9).</li>
-      <li>Some baseline characteristics (smoking, family history) are affected by a date-semantics question until an assessment date is confirmed (Q&amp;A 1).</li>
-      <li>The active-surveillance vs watchful-waiting distinction is absent from this extract (Q&amp;A 8).</li>
+      <li>ADT dose is not collected by the registry (there is no dose field); the ADT agent, start date and stop date are captured and the agent maps to a standard drug ingredient, so dose is the only ADT attribute unavailable (Q&amp;A 9).</li>
+      <li>A few coded values have no exact standard concept and are kept as the source value with <code>concept_id = 0</code> (for example ADT agents recorded as "Other"), rather than forcing a misleading concept.</li>
+      <li>Baseline characteristics (smoking, family history) are dated from the biopsy date, the assessment point IPCOR confirmed; a methods point for time-based analysis (Q&amp;A 1).</li>
       <li>The extract is a mid-compilation snapshot; some missingness is maturation, not error, and flagged records will be re-dated when IPCOR supplies a single synchronised extract.</li>
+      <li>Patient-reported outcomes (the PROMs form) are not mapped in this release.</li>
     </ul>
     <p>None of these are defects in the mapping; they are properties of the current source extract, documented so analysis is interpreted correctly.</p>
 
