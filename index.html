@@ -406,7 +406,7 @@ cd dqd &amp;&amp; Rscript run_dqd.R                      <span class="c"># data 
 
     <p><strong>The mapper</strong> (<code>localhost:8501</code>), the tool that turns the CSVs into the OMOP database:</p>
     <ul>
-      <li><strong>Build CDM</strong>, the everyday job top to bottom: upload the five files, check them (it flags a missing file or column), build the CDM, then download the finished tables and see any variables that were not mapped.</li>
+      <li><strong>Build CDM</strong>, the everyday job top to bottom: upload the five files, check them (it flags a missing file or column), build the CDM, then download the finished tables and see any variables that were not mapped. The same tab has an <strong>Or: generate a synthetic extract</strong> panel, where you set a patient count and a seed to produce a test cohort (download it, or build straight from it) with no real data.</li>
       <li><strong>Data quality</strong>, runs the OHDSI Data Quality Dashboard on what you just built and shows the pass rate and the failing checks.</li>
       <li><strong>Data model</strong>, a plain explainer of how the registry forms relate to the OMOP tables. For understanding, not for doing.</li>
       <li>Two maintainer-only tabs appear for people editing the mappings: <strong>Author mappings</strong> (point and click a standard concept for each value a field takes) and <strong>Add a field</strong> (bring a new source field in). Most users never touch these.</li>
@@ -444,6 +444,7 @@ cd dqd &amp;&amp; Rscript run_dqd.R                      <span class="c"># data 
 
     <h2 id="synthetic"><span class="n">12</span>Synthetic data for safe testing</h2>
     <p>So collaborators can develop and test analysis code before any real data is involved, the pipeline includes a synthetic-cohort generator. It produces a clinically coherent prostate-cancer cohort in the exact IPCOR source format, from the structure and the mapping vocabularies alone, it never reads the real data. Each synthetic patient is simulated from clinical priors, so no row corresponds to a real person, and the cohort is built to <strong>mirror the concept coverage of the real CDM</strong>, so code that runs against the synthetic data will run against the real data. A collaborator builds and tests their study on the synthetic cohort on their own machine; only the finished code is later run against the real data locally.</p>
+    <p>The cohort can be produced from the command line, or directly in the mapper: the <strong>Build CDM</strong> tab has an <strong>Or: generate a synthetic extract</strong> panel where a chosen patient count and seed produce the five source files, to download or to build from in place. The same seed always reproduces the same cohort.</p>
 
     <h2 id="ack"><span class="n">13</span>Acknowledgements</h2>
     <p>This work was carried out by the eHealth-Hub for Cancer, with the support and clarifications of the IPCOR team.</p>
