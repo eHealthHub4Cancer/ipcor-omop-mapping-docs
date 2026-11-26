@@ -1,0 +1,588 @@
+<title>IPCOR to OMOP Mapping Record</title>
+<meta name="description" content="How the IPCOR prostate-cancer registry was standardised to the OMOP Common Data Model v5.4.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: fixed contents rail on the left, a single reading column on the right. */
+  :root{
+    --ink:#1b2437; --body:#2b3446; --muted:#64708a; --faint:#8a94a8;
+    --accent:#0b6e6e; --accent-ink:#0a5a5a; --accent-soft:#e6f1f0;
+    --amber:#b5540a; --amber-soft:#f8ede0;
+    --bg:#f7f8f6; --surface:#ffffff; --panel:#f0f3f1; --border:#dde3df; --rule:#c9d2cc;
+    --code-bg:#eef2ef; --code-ink:#184f4f;
+    --serif:"Spectral",Georgia,"Times New Roman",serif;
+    --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+    color-scheme:light;
+  }
+  :root:not([data-theme="light"]){ @media (prefers-color-scheme:dark){
+    --ink:#eef2f6; --body:#cbd4e1; --muted:#90a0b4; --faint:#6f7f94;
+    --accent:#49b3ad; --accent-ink:#67c6c0; --accent-soft:#113230;
+    --amber:#e0a260; --amber-soft:#35281a;
+    --bg:#0e1420; --surface:#141c2b; --panel:#192235; --border:#2a3850; --rule:#2a3850;
+    --code-bg:#172232; --code-ink:#7fd0ca; color-scheme:dark;
+  }}
+  :root[data-theme="dark"]{
+    --ink:#eef2f6; --body:#cbd4e1; --muted:#90a0b4; --faint:#6f7f94;
+    --accent:#49b3ad; --accent-ink:#67c6c0; --accent-soft:#113230;
+    --amber:#e0a260; --amber-soft:#35281a;
+    --bg:#0e1420; --surface:#141c2b; --panel:#192235; --border:#2a3850; --rule:#2a3850;
+    --code-bg:#172232; --code-ink:#7fd0ca; color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--body);
+    font-family:var(--sans); font-size:16px; line-height:1.68; -webkit-font-smoothing:antialiased;}
+  .wrap{display:grid; grid-template-columns:270px minmax(0,1fr); gap:0; max-width:1200px; margin:0 auto;}
+
+  /* Sidebar */
+  aside{border-right:1px solid var(--border);}
+  .rail{position:sticky; top:env(safe-area-inset-top,0px); max-height:100vh; overflow-y:auto;
+    padding:34px 22px 40px 28px;}
+  .brand{font-family:var(--serif); font-weight:700; color:var(--accent-ink); font-size:1.02rem; letter-spacing:.2px;}
+  .brand span{display:block; font-family:var(--sans); font-weight:500; color:var(--faint); font-size:.72rem;
+    letter-spacing:.09em; text-transform:uppercase; margin-top:4px;}
+  .toc{margin-top:26px;}
+  .toc a{display:block; color:var(--muted); text-decoration:none; font-size:.84rem; line-height:1.3;
+    padding:6px 10px; border-left:2px solid transparent; border-radius:0 5px 5px 0;}
+  .toc a:hover{color:var(--ink); background:var(--panel);}
+  .toc a.on{color:var(--accent-ink); border-left-color:var(--accent); background:var(--accent-soft); font-weight:600;}
+  .toc .grp{font-size:.68rem; text-transform:uppercase; letter-spacing:.11em; color:var(--faint);
+    margin:18px 0 6px 10px; font-weight:600;}
+
+  /* Content */
+  main{padding:54px 64px 90px; max-width:820px;}
+  .eyebrow{font-size:.74rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent);
+    font-weight:600; margin:0 0 14px;}
+  h1{font-family:var(--serif); font-weight:700; color:var(--ink); font-size:2.7rem; line-height:1.08;
+    margin:0 0 10px; letter-spacing:-.4px; text-wrap:balance;}
+  .lede{font-family:var(--serif); font-style:italic; color:var(--muted); font-size:1.24rem; line-height:1.5;
+    margin:0 0 20px; max-width:62ch;}
+  h2{font-family:var(--serif); font-weight:600; color:var(--ink); font-size:1.62rem; line-height:1.18;
+    margin:56px 0 4px; padding-top:18px; border-top:1px solid var(--rule); letter-spacing:-.2px; text-wrap:balance;}
+  h2 .n{color:var(--accent); font-size:.9rem; font-family:var(--mono); vertical-align:middle; margin-right:10px;}
+  h3{font-family:var(--serif); font-weight:600; color:var(--ink); font-size:1.18rem; margin:30px 0 2px;}
+  p{margin:14px 0; max-width:66ch;}
+  main a{color:var(--accent-ink); text-decoration:underline; text-underline-offset:2px; text-decoration-thickness:1px;}
+  strong{color:var(--ink); font-weight:600;}
+  code{font-family:var(--mono); font-size:.86em; background:var(--code-bg); color:var(--code-ink);
+    padding:1px 5px; border-radius:4px;}
+  ul{margin:14px 0; padding-left:0; list-style:none; max-width:66ch;}
+  ul li{position:relative; padding-left:22px; margin:9px 0;}
+  ul li::before{content:""; position:absolute; left:4px; top:11px; width:6px; height:6px; border-radius:50%;
+    background:var(--accent);}
+  .meta{display:grid; grid-template-columns:auto 1fr; gap:4px 20px; margin:22px 0 4px; font-size:.9rem;
+    border:1px solid var(--border); border-radius:12px; padding:18px 22px; background:var(--surface);}
+  .meta dt{color:var(--faint); font-weight:600; font-size:.74rem; text-transform:uppercase; letter-spacing:.07em; padding-top:3px;}
+  .meta dd{margin:0; color:var(--body);}
+
+  .tablewrap{overflow-x:auto; margin:20px 0; border:1px solid var(--border); border-radius:12px;}
+  table{border-collapse:collapse; width:100%; font-size:.88rem; min-width:460px;}
+  th,td{text-align:left; padding:11px 15px; border-bottom:1px solid var(--border); vertical-align:top;}
+  thead th{background:var(--panel); color:var(--ink); font-weight:600; font-size:.78rem;
+    text-transform:uppercase; letter-spacing:.05em;}
+  tbody tr:last-child td{border-bottom:none;}
+  td code{white-space:nowrap;}
+
+  /* Q&A cards */
+  .qa{margin:22px 0; display:flex; flex-direction:column; gap:12px;}
+  .qa-item{border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:16px 18px;
+    display:grid; grid-template-columns:38px 1fr; gap:4px 14px;}
+  .qa-num{font-family:var(--mono); color:var(--faint); font-size:1.1rem; font-weight:500; grid-row:1/3;}
+  .qa-q{color:var(--ink); font-weight:600; font-size:.95rem; margin:0;}
+  .qa-a{margin:6px 0 0; font-size:.9rem; color:var(--body);}
+  .badge{display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    padding:2px 9px; border-radius:20px; margin-right:8px; vertical-align:1px;}
+  .badge.ok{background:var(--accent-soft); color:var(--accent-ink);}
+  .badge.open{background:var(--amber-soft); color:var(--amber);}
+
+  .callout{border-left:3px solid var(--accent); background:var(--panel); border-radius:0 10px 10px 0;
+    padding:16px 20px; margin:22px 0; font-size:.94rem;}
+  .callout strong{color:var(--accent-ink);}
+  .fund{font-style:italic; color:var(--muted); font-size:.92rem;}
+
+  footer{border-top:1px solid var(--rule); margin-top:62px; padding-top:26px; color:var(--faint); font-size:.84rem;}
+  footer a{color:var(--accent-ink);}
+
+  .menubtn{display:none;}
+  @media (max-width:880px){
+    .wrap{grid-template-columns:1fr;}
+    aside{border-right:none; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:20;
+      background:var(--bg);}
+    .rail{position:static; max-height:none; padding:14px 20px;}
+    .menubtn{display:inline-flex; align-items:center; gap:8px; margin-top:12px; cursor:pointer;
+      background:var(--panel); border:1px solid var(--border); color:var(--ink); font-family:var(--sans);
+      font-size:.82rem; font-weight:600; padding:7px 13px; border-radius:8px;}
+    .toc{display:none;} .toc.show{display:block;}
+    main{padding:34px 22px 70px;}
+    h1{font-size:2.05rem;} .lede{font-size:1.08rem;}
+  }
+
+  .fig{margin:28px 0; text-align:center;}
+  .fig svg{max-width:100%; height:auto; border:1px solid var(--border); border-radius:12px; background:#eef3f1;}
+  .fig figcaption{margin:12px auto 0; font-size:.82rem; color:var(--muted); font-style:italic; max-width:62ch;}
+</style>
+
+<div class="wrap">
+  <aside>
+    <div class="rail">
+      <div class="brand">eHealth-Hub for Cancer<span>IPCOR → OMOP CDM</span></div>
+      <button class="menubtn" id="menubtn" aria-expanded="false">Contents ▾</button>
+      <nav class="toc" id="toc">
+        <div class="grp">Overview</div>
+        <a href="#summary">Executive summary</a>
+        <a href="#background">Background &amp; objective</a>
+        <a href="#source">The source data</a>
+        <a href="#stack">Stack &amp; tools</a>
+        <div class="grp">The mapping</div>
+        <a href="#method">How it was done</a>
+        <a href="#mapped">What was mapped</a>
+        <a href="#notmapped">What was not mapped</a>
+        <a href="#faithful">Faithful to source</a>
+        <a href="#qa">Clarifications (Q&amp;A)</a>
+        <div class="grp">Running it</div>
+        <a href="#run">How to run</a>
+        <a href="#quality">Quality &amp; limitations</a>
+        <a href="#synthetic">Synthetic data</a>
+        <div class="grp">About</div>
+        <a href="#ack">Acknowledgements</a>
+        <a href="#glossary">Glossary</a>
+        <a href="#varlist">Variable list</a>
+      </nav>
+    </div>
+  </aside>
+
+  <main>
+    <p class="eyebrow">Mapping Process Documentation · v1.0 · 26 Nov 2026</p>
+    <h1>IPCOR prostate-cancer registry to the OMOP CDM</h1>
+    <p class="lede">What was mapped, what was not, how it was done, the tools and stack, how the mapping was kept faithful to source, how to run the pipeline, and the clarifications with the IPCOR team.</p>
+    <dl class="meta">
+      <dt>Author</dt><dd>Jeremiah Akintomide, eHealth-Hub for Cancer, University of Limerick</dd>
+      <dt>Supervisors</dt><dd>Katie Crowley · Amir Jalali</dd>
+      <dt>Prepared for</dt><dd>The IPCOR team, who may share it further at their discretion</dd>
+      <dt>Contact</dt><dd>akintomide.jeremiah@ul.ie</dd>
+    </dl>
+
+    <h2 id="summary"><span class="n">01</span>Executive summary</h2>
+    <p>This record describes how the IPCOR national prostate-cancer registry was standardised to the OMOP Common Data Model, version 5.4. It is written so the IPCOR team can keep it, circulate it for sign-off, and share it further at their discretion.</p>
+    <p>The IPCOR extract arrives as five source files in the registry's own format, with its own field names and coded values, and <strong>no pre-existing standard vocabulary</strong>. The task was therefore twofold: decide, for every field and every coded answer, which standard OMOP concept represents it, and then transform the data into the CDM tables so it can be queried and compared across sites.</p>
+    <p>The mapping followed the standard OHDSI toolchain. The source was profiled with <strong>WhiteRabbit</strong>; the table-by-table ETL design was authored in <strong>Rabbit-in-a-Hat</strong>; each field was mapped to a standard concept found in <strong>Athena</strong>; each categorical value was mapped in <strong>Usagi</strong> and exported as a source-to-concept map; and the result was validated with the OHDSI <strong>Data Quality Dashboard</strong>. Because IPCOR has no ontology of its own, every concept was sourced from Athena and reviewed by hand.</p>
+    <p>Alongside the mapping, a set of tools was built so the pipeline runs without touching code: a one-click Docker appliance that turns the raw CSVs into an OMOP database on the user's own machine, a research dashboard over the built data, and an optional analysis workbench (RStudio Server and JupyterLab) in which a collaborator can run an OHDSI study locally, the data never leaving the machine.</p>
+
+    <h2 id="background"><span class="n">02</span>Background &amp; objective</h2>
+    <h3>The IPCOR registry</h3>
+    <p>IPCOR is Ireland's national prostate-cancer registry. It captures the diagnostic work-up, staging, pathology, treatment and follow-up of men assessed for prostate cancer across a network of participating hospitals. The data is rich and clinically detailed, but held in the registry's bespoke structure and coding, which makes cross-study analysis difficult without standardisation.</p>
+    <h3>Why OMOP</h3>
+    <p>The OMOP Common Data Model is the open standard maintained by the OHDSI community for observational health data. Once data is in OMOP, standard analytical tools and study packages run against it unchanged, and results can be compared or pooled across institutions. A registry with no existing standard vocabulary cannot simply be relabelled: every field and coded answer must be matched to a standard concept drawn from the OMOP vocabularies (SNOMED, LOINC, RxNorm and others), downloaded from Athena. That concept-matching, and the review that goes with it, is the heart of this work.</p>
+    <h3>The wider vision, a federated network</h3>
+    <p>The end goal is a federated model: IPCOR becomes a node in an OMOP network where researchers send their analysis as code, the code runs locally against the OMOP data, and only aggregate results leave the machine. The raw records never move. Standardising IPCOR to OMOP is the enabling first step, and the analysis workbench below is where such external studies would run.</p>
+    <div class="callout"><strong>The eHealth-Hub for Cancer</strong> is a Strand II project funded under the North South Research Programme (NSRP). The NSRP is a collaborative scheme funded through the Government's Shared Island Fund. It is being administered by the Higher Education Authority (HEA) on behalf of the Department of Further and Higher Education, Research, Innovation and Science., <a href="https://ehealth4cancer.ie/">ehealth4cancer.ie</a></div>
+
+    <h2 id="source"><span class="n">03</span>The source data</h2>
+    <p>The extract is five CSV files that together describe each patient's prostate-cancer pathway, linked by a single pseudonymised patient identifier.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Source file</th><th>What it records</th></tr></thead>
+      <tbody>
+        <tr><td><code>demo-diagnosis.csv</code></td><td>Demographics and the diagnosis record: age, PSA, Gleason/ISUP grade, clinical T/N/M stage and TNM group, risk scores (NCCN, CAPRA, PRIAS), histology, staging-imaging flags, smoking and family history.</td></tr>
+        <tr><td><code>sub-form.csv</code></td><td>The longitudinal follow-up: the PSA series (repeated readings with dates) and MRI (PI-RADS, prostate volume and dimensions).</td></tr>
+        <tr><td><code>biopsy.csv</code></td><td>Biopsy records: date, approach, Gleason, laterality, detection basis and the tumour-present outcome.</td></tr>
+        <tr><td><code>treatment.csv</code></td><td>Surgery, radiotherapy, ADT, chemotherapy, brachytherapy, watchful waiting and active surveillance, with intent and stop reasons.</td></tr>
+        <tr><td><code>proms.csv</code></td><td>Patient-reported outcomes (EPIC-26 and related instruments).</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Cohort.</strong> The extract references 302 patients; the built CDM holds 300 (two out-of-cohort records are excluded by configuration, never by editing the source). <strong>Conventions</strong> the mapping honours exactly include: grade recorded as numbers (ISUP 1-5 with -1 as a "not assessed" sentinel; NCCN a 1-5 ordinal; PRIAS 0/1; CAPRA 0-10); stage fields carrying the crosswalk's description text; and <code>PSALevel</code> being a positional index into the PSA sub-form series (which PSA test the record points to), not a PSA value, so the canonical numeric PSA is the sub-form series itself.</p>
+    <p>The extract is a <strong>mid-compilation snapshot</strong> of a live registry, so some fields are legitimately incomplete rather than wrong, missingness often reflects a reporting schedule or a benign patient who correctly has no diagnosis. This maturation-versus-error distinction runs through the Q&amp;A.</p>
+
+    <h2 id="stack"><span class="n">04</span>The technical stack &amp; the tools built</h2>
+    <p>The pipeline is built from open, standard components, and the same code is reused by every service.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Layer</th><th>Technology</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>Database</td><td>PostgreSQL + OMOP CDM v5.4</td><td>Holds the CDM tables and the vocabulary the foreign keys point at.</td></tr>
+        <tr><td>Vocabulary</td><td>OHDSI Athena (SNOMED, LOINC, RxNorm…)</td><td>The standard concepts every mapping resolves to.</td></tr>
+        <tr><td>ETL</td><td>Python (pandas, SQLAlchemy)</td><td>One transformer per OMOP table; applies the mappings, builds the derived tables.</td></tr>
+        <tr><td>OHDSI / R</td><td>DatabaseConnector, OmopConstructor, DataQualityDashboard</td><td>observation_period construction, the DQD, and the connectivity a study package expects.</td></tr>
+        <tr><td>Mapper</td><td>Streamlit web app</td><td>Upload → validate → build → download the OMOP tables. No code, no DB admin.</td></tr>
+        <tr><td>Dashboard</td><td>Plotly Dash</td><td>Overview, treatment pathways, cohort builder, a query builder and a SQL console.</td></tr>
+        <tr><td>Research workbench</td><td>RStudio Server + JupyterLab</td><td>Opt-in, preconnected environment where OHDSI study packages and feasibility queries run locally.</td></tr>
+        <tr><td>Packaging</td><td>Docker / Compose</td><td>A sealed, double-click appliance; data is mounted at run time, never baked into an image.</td></tr>
+      </tbody>
+    </table></div>
+    <p>The mapper turns the raw CSVs into the OMOP CDM inside PostgreSQL; the dashboard, query builder and research workbench all read that same database. Patient data never enters an image, so it never leaves the machine.</p>
+    <figure class="fig"><svg xmlns="http://www.w3.org/2000/svg" width="1120" height="560" viewBox="0 0 1120 560" font-family="Arial, Helvetica, sans-serif"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#9fb3ad"/></marker>
+  <marker id="aht" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#0b6e6e"/></marker>
+</defs><rect width="1120" height="560" rx="14" fill="#eef3f1"/><text x="26" y="34" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#1f2a44" text-anchor="start">The dockerised applications</text><rect x="390" y="48" width="340" height="62" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="390" y="48" width="5" height="62" rx="2.5" fill="#5a6472"/><text x="560" y="77.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">GHCR public images</text><text x="560" y="97.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">app · postgres · rstudio · jupyter</text><rect x="40" y="140" width="1040" height="388" rx="16" ry="16" fill="none" stroke="#0b6e6e" stroke-width="2" stroke-dasharray="7 6"/><text x="58" y="164" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#0b6e6e" text-anchor="start" letter-spacing="1">DOCKER, on your machine</text><line x1="560" y1="110" x2="560" y2="176" stroke="#9fb3ad" stroke-width="2" marker-end="url(#ah)"/><text x="600" y="150" font-family="Arial, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#5a6472" text-anchor="start">pulled on first run</text><rect x="66" y="186" width="228" height="74" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="66" y="186" width="5" height="74" rx="2.5" fill="#0b6e6e"/><text x="180" y="221.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Mapper</text><text x="180" y="241.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Streamlit · :8501</text><rect x="314" y="186" width="228" height="74" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="314" y="186" width="5" height="74" rx="2.5" fill="#0b6e6e"/><text x="428" y="221.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Dashboard</text><text x="428" y="241.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Dash · :8050</text><rect x="562" y="186" width="228" height="74" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="562" y="186" width="5" height="74" rx="2.5" fill="#b5540a"/><text x="676" y="221.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">RStudio</text><text x="676" y="241.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">OHDSI R · :8787</text><rect x="810" y="186" width="228" height="74" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="810" y="186" width="5" height="74" rx="2.5" fill="#b5540a"/><text x="924" y="221.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">JupyterLab</text><text x="924" y="241.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Python + R · :8888</text><rect x="300" y="392" width="520" height="96" rx="10" ry="10" fill="#dfeeec" stroke="#cdd6d2" stroke-width="1.6"/><rect x="300" y="392" width="5" height="96" rx="2.5" fill="#0a5a5a"/><text x="560" y="438.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">PostgreSQL</text><text x="560" y="458.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">The OMOP CDM v5.4 + vocabulary</text><line x1="180" y1="264" x2="320" y2="388" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><line x1="408" y1="264" x2="408" y2="388" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><line x1="636" y1="264" x2="636" y2="388" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><line x1="864" y1="264" x2="800" y2="388" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="66" y="402" width="200" height="74" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="66" y="402" width="5" height="74" rx="2.5" fill="#b5540a"/><text x="166" y="437.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Source CSVs</text><text x="166" y="457.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">mounted read-only</text><line x1="266" y1="439" x2="296" y2="439" stroke="#b5540a" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#aht)"/><text x="560" y="540" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="600" fill="#5a6472" text-anchor="middle">Data is mounted at run time, never baked into an image, so it never leaves the machine.</text></svg><figcaption>The dockerised applications all read one PostgreSQL database; source data is mounted at run time and never leaves the machine.</figcaption></figure>
+
+    <h2 id="method"><span class="n">05</span>How the mapping was done, the OHDSI methodology</h2>
+    <p>Because IPCOR has no vocabulary of its own, the central activity was finding and reviewing a standard concept for every field and value, using Athena and Usagi.</p>
+    <figure class="fig"><svg xmlns="http://www.w3.org/2000/svg" width="1180" height="230" viewBox="0 0 1180 230" font-family="Arial, Helvetica, sans-serif"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#9fb3ad"/></marker>
+  <marker id="aht" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#0b6e6e"/></marker>
+</defs><rect width="1180" height="230" rx="14" fill="#eef3f1"/><text x="26" y="34" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#1f2a44" text-anchor="start">How the mapping is built</text><rect x="20" y="56" width="160" height="96" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="20" y="56" width="5" height="96" rx="2.5" fill="#b5540a"/><text x="100" y="94" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Source extract</text><text x="100" y="114" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Five IPCOR</text><text x="100" y="131" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">CSV files</text><line x1="186" y1="104" x2="210" y2="104" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="216" y="56" width="160" height="96" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="216" y="56" width="5" height="96" rx="2.5" fill="#0b6e6e"/><text x="296" y="94" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">WhiteRabbit</text><text x="296" y="114" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Profile the source</text><text x="296" y="131" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">(scan report)</text><line x1="382" y1="104" x2="406" y2="104" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="412" y="56" width="160" height="96" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="412" y="56" width="5" height="96" rx="2.5" fill="#0b6e6e"/><text x="492" y="94" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Rabbit-in-a-Hat</text><text x="492" y="114" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Table-by-table</text><text x="492" y="131" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">ETL design</text><line x1="578" y1="104" x2="602" y2="104" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="608" y="56" width="160" height="96" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="608" y="56" width="5" height="96" rx="2.5" fill="#0b6e6e"/><text x="688" y="94" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Athena + Usagi</text><text x="688" y="114" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Field &amp; value</text><text x="688" y="131" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">concept mapping</text><line x1="774" y1="104" x2="798" y2="104" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="804" y="56" width="160" height="96" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="804" y="56" width="5" height="96" rx="2.5" fill="#0b6e6e"/><text x="884" y="94" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Python ETL</text><text x="884" y="114" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Build the CDM</text><text x="884" y="131" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">tables</text><line x1="970" y1="104" x2="994" y2="104" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="1000" y="56" width="160" height="96" rx="10" ry="10" fill="#dfeeec" stroke="#cdd6d2" stroke-width="1.6"/><rect x="1000" y="56" width="5" height="96" rx="2.5" fill="#0a5a5a"/><text x="1080" y="94" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">OMOP CDM</text><text x="1080" y="114" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Validated by</text><text x="1080" y="131" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">OHDSI DQD</text><text x="590" y="212" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="600" fill="#5a6472" text-anchor="middle">The source CSVs are the single source of truth; patient data never leaves the machine.</text></svg><figcaption>The mapping pipeline, from the source extract through profiling, design and concept mapping to the validated OMOP CDM.</figcaption></figure>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Step</th><th>Tool</th><th>What was produced</th></tr></thead>
+      <tbody>
+        <tr><td>1 · Profile the source</td><td>WhiteRabbit</td><td>A scan report of every table, field, data type, and the distinct values and frequencies, the basis for all decisions.</td></tr>
+        <tr><td>2 · Design the ETL</td><td>Rabbit-in-a-Hat</td><td>A table-by-table mapping specification, authored collaboratively with one owner per target table.</td></tr>
+        <tr><td>3 · Field-level mapping</td><td>Athena</td><td>For each variable, the standard concept describing what it records (Standard = "Standard"; follow "Maps to" where needed).</td></tr>
+        <tr><td>4 · Value-level mapping</td><td>Usagi + Athena</td><td>For each categorical answer, its standard concept, mapped and reviewed in Usagi, exported as a source-to-concept map.</td></tr>
+        <tr><td>5 · Load &amp; transform</td><td>Python ETL</td><td>The finished crosswalks load; the transformers build the CDM, the eras, visits, observation_period and the alignment steps.</td></tr>
+        <tr><td>6 · Validate</td><td>OHDSI DQD</td><td>Automated conformance, completeness and plausibility checks over the built CDM.</td></tr>
+      </tbody>
+    </table></div>
+    <p>The full Rabbit-in-a-Hat design, every source column mapped to its OMOP table and field with the logic and modelling notes, is provided as a companion document, the <em>IPCOR OMOP Field-Level Mapping Specification</em> (bundled with this documentation). This page covers the method and the decisions; that specification is the detailed field-by-field reference behind them.</p>
+    <h3>Field-level versus value-level</h3>
+    <p>Two distinct levels of mapping were needed, and keeping them separate is what makes the result correct. <strong>Field-level</strong> is what a variable records (an EPIC-26 question maps to a concept for that question); these decisions live in the per-file variable maps. <strong>Value-level</strong> is what a particular answer means ("About once a week" maps to its own concept, stored as <code>value_as_concept_id</code>); these are made in Usagi.</p>
+    <h3>Mapping conventions</h3>
+    <ul>
+      <li><strong>Standard concepts only</strong>, where the best match is non-standard, follow its "Maps to" relationship.</li>
+      <li><strong>Domain must match the table</strong>, a Condition concept is not used in an Observation or Measurement row.</li>
+      <li><strong>concept_id = 0 is a last resort</strong>, with the original value kept in the source-value field.</li>
+      <li><strong>Absence is not a row</strong>, the absence of a condition is the absence of a record, not a "No" row.</li>
+      <li><strong>The source CSVs are the single source of truth</strong>, loaded tables are never hand-edited.</li>
+    </ul>
+    <p>After the clinical tables load, builders run automatically: visits are grouped from event dates; observation_period is each patient's first-to-last span; condition and drug eras roll up on the 30-day gap rule; and fact relationships record the documented links. Two idempotent alignment steps then re-code TNM staging to the AJCC/UICC Cancer Modifier concepts network studies expect, and the watchful-waiting/active-surveillance observations to their per-value concept.</p>
+
+    <h2 id="mapped"><span class="n">06</span>What was mapped</h2>
+    <p>Mapping is multi-source: one form can populate several OMOP tables, and one table can be built from several forms.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Source file</th><th>Staged</th><th>Mapped</th></tr></thead>
+      <tbody>
+        <tr><td><code>demo-diagnosis.csv</code></td><td>Yes</td><td>Yes</td></tr>
+        <tr><td><code>biopsy.csv</code></td><td>Yes</td><td>Yes</td></tr>
+        <tr><td><code>treatment.csv</code></td><td>Yes</td><td>Yes</td></tr>
+        <tr><td><code>sub-form.csv</code></td><td>Yes</td><td>Yes</td></tr>
+        <tr><td><code>proms.csv</code></td><td>Yes</td><td>Pending (see below)</td></tr>
+      </tbody>
+    </table></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>OMOP table</th><th>What IPCOR data populates it</th></tr></thead>
+      <tbody>
+        <tr><td><code>person</code></td><td>One row per patient: year of birth and the structural demographics.</td></tr>
+        <tr><td><code>observation_period</code></td><td>Each patient's first-to-last observation span (OmopConstructor).</td></tr>
+        <tr><td><code>condition_occurrence</code></td><td>The primary prostate-cancer diagnosis (adenocarcinoma, from histology) and tumour pathology features (perineural/lymphovascular invasion, extraprostatic extension, cribriform pattern).</td></tr>
+        <tr><td><code>drug_exposure</code> / <code>drug_era</code></td><td>Androgen-deprivation agents (LHRH agonists/antagonists, anti-androgens, ARPIs where present).</td></tr>
+        <tr><td><code>procedure_occurrence</code></td><td>Biopsy of prostate (and the TRUS/transperineal approach), digital rectal exam, radical prostatectomy, EBRT, brachytherapy, TURP, focal ablation, and staging imaging (bone scan, CT, PSMA-PET, PET-CT).</td></tr>
+        <tr><td><code>measurement</code></td><td>PSA series, Gleason primary/secondary/score/tertiary, prostate dimensions and volume, TNM categories, PI-RADS.</td></tr>
+        <tr><td><code>observation</code></td><td>Clinical T-category assessment, risk scores (NCCN, CAPRA, PRIAS) as numeric values, smoking, family history, watchful-waiting/active-surveillance status.</td></tr>
+        <tr><td><code>death · care_site · provider · visit_occurrence · fact_relationship</code></td><td>Death (and cause where a crosswalk exists), the participating facilities and providers, visits grouped from event dates, and the documented links (treatment ↔ pre-treatment PSA, biopsy ↔ MRI).</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="notmapped"><span class="n">07</span>What was not mapped, and why</h2>
+    <p>Being explicit about what is not yet mapped is part of an honest hand-off. Nothing below is an error; each is a deliberate, documented decision.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Item</th><th>Why it is not mapped (yet)</th></tr></thead>
+      <tbody>
+        <tr><td>Patient-reported outcomes (<code>proms.csv</code>)</td><td>The baseline EPIC-26 value set is mapped in Usagi (the worklists exist), but the PROMs transformer is not yet wired into the pipeline. Only the baseline survey carries data; demographics and 6-month follow-up are empty and map when data arrives.</td></tr>
+        <tr><td>Pointer / index fields</td><td>Fields such as the diagnosis PSA-level pointer are positional indices into a series, not values; not mapped to a concept by design.</td></tr>
+        <tr><td>Fields awaiting an IPCOR value crosswalk</td><td>A few treatment values (and cause of death) are kept as source strings and resolve once IPCOR confirms their value list.</td></tr>
+        <tr><td>Fields absent from the extract</td><td>Some dictionary fields are not present at all (the surveillance-type field separating active surveillance from watchful waiting; the specific ADT agent/dose/date). These cannot be mapped until provided.</td></tr>
+        <tr><td>No-suitable-concept fields</td><td>Where no standard concept fits, the value is kept with <code>concept_id = 0</code> and the original preserved, rather than forcing a misleading concept.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="faithful"><span class="n">08</span>Keeping the mapping faithful to the source</h2>
+    <p>Keeping the mapping close to what the registry actually means, not just what the data superficially looks like, was a governed, iterative process.</p>
+    <p><strong>The review loop.</strong> Every mapping passed through the same loop: profile the source (WhiteRabbit) so decisions rest on real values; design the target in Rabbit-in-a-Hat, table by table, with a named owner; map field- and value-level against Athena/Usagi; review each decision (standard concept, correct domain, sensible target); load; and validate with the DQD. Ambiguities were not guessed, they were escalated to IPCOR and resolved before being baked in.</p>
+    <ul>
+      <li><strong>Standard-concept checking</strong>, a validation step confirms every mapped concept is a standard OMOP concept.</li>
+      <li><strong>Unmapped-column coverage</strong>, a report lists which source columns are and are not mapped, so nothing is silently dropped.</li>
+      <li><strong>OHDSI Data Quality Dashboard</strong>, the community-standard conformance/completeness/plausibility battery, surfaced on demand in the mapper.</li>
+    </ul>
+
+    <figure class="fig"><svg xmlns="http://www.w3.org/2000/svg" width="940" height="540" viewBox="0 0 940 540" font-family="Arial, Helvetica, sans-serif"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#9fb3ad"/></marker>
+  <marker id="aht" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#0b6e6e"/></marker>
+</defs><rect width="940" height="540" rx="14" fill="#eef3f1"/><text x="26" y="34" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#1f2a44" text-anchor="start">The data-quality loop</text><path d="M 571.5 98.8 A 204.20000000000002 204.20000000000002 0 0 1 647.2 174.5" fill="none" stroke="#0b6e6e" stroke-width="2.2" marker-end="url(#aht)"/><path d="M 647.2 377.5 A 204.20000000000002 204.20000000000002 0 0 1 571.5 453.2" fill="none" stroke="#0b6e6e" stroke-width="2.2" marker-end="url(#aht)"/><path d="M 368.5 453.2 A 204.20000000000002 204.20000000000002 0 0 1 292.8 377.5" fill="none" stroke="#0b6e6e" stroke-width="2.2" marker-end="url(#aht)"/><path d="M 292.8 174.5 A 204.20000000000002 204.20000000000002 0 0 1 368.5 98.8" fill="none" stroke="#0b6e6e" stroke-width="2.2" marker-end="url(#aht)"/><circle cx="470" cy="276" r="58" fill="#dfeeec" stroke="#0b6e6e" stroke-width="1.8"/><text x="470" y="272.5" font-family="Arial, Helvetica, sans-serif" font-size="13.5" font-weight="700" fill="#0a5a5a" text-anchor="middle">DQD</text><text x="470" y="289.5" font-family="Arial, Helvetica, sans-serif" font-size="13.5" font-weight="700" fill="#0a5a5a" text-anchor="middle">quality gate</text><rect x="363" y="57.79999999999998" width="214" height="80" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="363" y="57.79999999999998" width="5" height="80" rx="2.5" fill="#0b6e6e"/><text x="470" y="96.29999999999998" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Build the CDM</text><text x="470" y="116.29999999999998" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Python ETL</text><rect x="541.2" y="236" width="214" height="80" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="541.2" y="236" width="5" height="80" rx="2.5" fill="#0b6e6e"/><text x="648.2" y="274.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Run OHDSI DQD</text><text x="648.2" y="294.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">~3,500 checks</text><rect x="363" y="414.20000000000005" width="214" height="80" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="363" y="414.20000000000005" width="5" height="80" rx="2.5" fill="#0b6e6e"/><text x="470" y="452.70000000000005" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Review the failures</text><text x="470" y="472.70000000000005" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">by check type</text><rect x="184.79999999999995" y="236" width="214" height="80" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="184.79999999999995" y="236" width="5" height="80" rx="2.5" fill="#0b6e6e"/><text x="291.79999999999995" y="274.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Fix ETL or mapping</text><text x="291.79999999999995" y="294.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">then rebuild</text><text x="470" y="524" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="600" fill="#5a6472" text-anchor="middle">Every build is re-checked, and the loop repeats until the data-quality results are clean.</text></svg><figcaption>The data-quality loop: each build is validated by the OHDSI DQD, failures are reviewed and fixed, and the loop repeats until the results are clean.</figcaption></figure>
+
+    <h2 id="qa"><span class="n">09</span>Clarifications with IPCOR that shaped the mapping</h2>
+    <p>Where the source data alone could not settle a modelling question, it was put to the IPCOR team and answered. Each point below is shown with IPCOR's clarification and the mapping decision that followed. These are what keep the mapping close to the registry's intent.</p>
+
+    <figure class="fig"><svg xmlns="http://www.w3.org/2000/svg" width="940" height="540" viewBox="0 0 940 540" font-family="Arial, Helvetica, sans-serif"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#9fb3ad"/></marker>
+  <marker id="aht" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#0b6e6e"/></marker>
+</defs><rect width="940" height="540" rx="14" fill="#eef3f1"/><text x="26" y="34" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#1f2a44" text-anchor="start">The IPCOR feedback loop</text><path d="M 571.5 98.8 A 204.20000000000002 204.20000000000002 0 0 1 647.2 174.5" fill="none" stroke="#0b6e6e" stroke-width="2.2" marker-end="url(#aht)"/><path d="M 647.2 377.5 A 204.20000000000002 204.20000000000002 0 0 1 571.5 453.2" fill="none" stroke="#0b6e6e" stroke-width="2.2" marker-end="url(#aht)"/><path d="M 368.5 453.2 A 204.20000000000002 204.20000000000002 0 0 1 292.8 377.5" fill="none" stroke="#0b6e6e" stroke-width="2.2" marker-end="url(#aht)"/><path d="M 292.8 174.5 A 204.20000000000002 204.20000000000002 0 0 1 368.5 98.8" fill="none" stroke="#0b6e6e" stroke-width="2.2" marker-end="url(#aht)"/><circle cx="470" cy="276" r="58" fill="#dfeeec" stroke="#b5540a" stroke-width="1.8"/><text x="470" y="272.5" font-family="Arial, Helvetica, sans-serif" font-size="13.5" font-weight="700" fill="#0a5a5a" text-anchor="middle">Preserve</text><text x="470" y="289.5" font-family="Arial, Helvetica, sans-serif" font-size="13.5" font-weight="700" fill="#0a5a5a" text-anchor="middle">granularity</text><rect x="363" y="57.79999999999998" width="214" height="80" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="363" y="57.79999999999998" width="5" height="80" rx="2.5" fill="#b5540a"/><text x="470" y="96.29999999999998" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Draft the mapping</text><text x="470" y="116.29999999999998" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">from the data dictionary</text><rect x="541.2" y="236" width="214" height="80" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="541.2" y="236" width="5" height="80" rx="2.5" fill="#b5540a"/><text x="648.2" y="274.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Raise the question</text><text x="648.2" y="294.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">log the ambiguity</text><rect x="363" y="414.20000000000005" width="214" height="80" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="363" y="414.20000000000005" width="5" height="80" rx="2.5" fill="#b5540a"/><text x="470" y="452.70000000000005" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">IPCOR clarifies</text><text x="470" y="472.70000000000005" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">what the field means</text><rect x="184.79999999999995" y="236" width="214" height="80" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="184.79999999999995" y="236" width="5" height="80" rx="2.5" fill="#b5540a"/><text x="291.79999999999995" y="274.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Realign the mapping</text><text x="291.79999999999995" y="294.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">keep the source detail</text><text x="470" y="524" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="600" fill="#5a6472" text-anchor="middle">Each clarification from the IPCOR team feeds back into the mapping, so no source detail is lost.</text></svg><figcaption>The IPCOR feedback loop: an ambiguity in the draft mapping is raised with the registry, IPCOR clarifies what the field means, and the mapping is realigned so the source granularity is preserved.</figcaption></figure>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Point raised with IPCOR</th><th>IPCOR’s clarification and how it shaped the mapping</th></tr></thead>
+      <tbody>
+        <tr><td>When and where smoking status and family history are recorded.</td><td>IPCOR confirmed these are in the demographic form and are noted at the biopsy, so they are dated from the date of biopsy (which every patient has) rather than the diagnosis date. This keeps them for the negative-biopsy patients, who have a biopsy but no diagnosis.</td></tr>
+        <tr><td>Which MRI, PSA and facility record is authoritative when the same item appears in several forms.</td><td>IPCOR confirmed the real values live in the sub-forms, and the versions in the diagnosis, biopsy and treatment forms are drop-down selections pointing to those sub-form values. The sub-form is therefore the authoritative source. MRIs sharing a date and PI-RADS are treated as duplicates and removed; a missing date or result means the value is genuinely unavailable.</td></tr>
+        <tr><td>Whether ISUP and NCCN can be mapped to code lists, and what the value -1 means.</td><td>IPCOR confirmed ISUP and NCCN are calculated grade-group and risk scores, so there is no code list to map to and they are kept as numeric scores. A value of -1 means the score could not be calculated because a required input was missing, so it is stored as missing.</td></tr>
+        <tr><td>The one patient whose diagnosis record is internally contradictory.</td><td>IPCOR confirmed this is a known system glitch in which a diagnosis date could not be removed, and the patient is negative. The record is treated as benign and the stray date is disregarded.</td></tr>
+        <tr><td>What the numeric facility codes mean.</td><td>IPCOR confirmed the numeric code is the index of the institute in the Institute sub-form (1 is the first institute, 2 the second, and so on), so the facility is resolved from the sub-form and the codes are read as positional pointers. The Hospital and Institute names are pseudonyms, so each real facility maps to one care_site.</td></tr>
+        <tr><td>What the biopsy MRIDetails code represents.</td><td>IPCOR confirmed it is the index of the MRI scan in the MRI sub-form (1 is MRI 1, 2 is MRI 2), so it is a positional pointer into the sub-form rather than a clinical result, and is not mapped as a concept.</td></tr>
+        <tr><td>Whether PSALevel is a PSA value or a code.</td><td>IPCOR confirmed PSALevel is the index of the PSA test in the PSA sub-form (1 is PSA 1, 2 is PSA 2), so it is a positional pointer, not a PSA value. The canonical numeric PSA is taken from the sub-form, and PSALevel is not mapped as a measurement.</td></tr>
+        <tr><td>Why the surveillance-type field is absent.</td><td>IPCOR confirmed the surveillance-type field was not in the variable list that had been requested, and can be added on request. Until then watchful waiting and active surveillance are mapped to a single provisional concept, and the field is pre-wired so the two separate automatically once it is supplied.</td></tr>
+        <tr><td>Why ADT has no specific agent.</td><td>IPCOR confirmed the ADT agent field was not in the requested variable list, and can be added on request. ADT is mapped at the recorded granularity, with the agent, dose and date fields pre-wired to populate once supplied.</td></tr>
+        <tr><td>Whether radiotherapy delivered at specialist centres is captured.</td><td>IPCOR confirmed that care delivered at non-recruiting sites, including St. Luke&#x27;s radiation-oncology network, is captured, with the treating facility recorded in each treatment form. Radiotherapy is therefore not under-recorded because of site coverage.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Several further decisions were confirmed with the registry and are in the code: visit-date semantics (treatment and biopsy dates are real attendance, while PSA and MRI dates are result-recorded and approximate), instance ordering (entry order, not chronological, so records are sorted by date), a diagnosis-date definition change handled by a cutoff rule, the 300 versus 302 cohort exclusion by configuration, and a few confirmed real-world column-name variants.</p>
+
+    <h2 id="run"><span class="n">10</span>How to run the pipeline</h2>
+    <p>There are two ways to run it; both keep the patient data on the local machine.</p>
+    <figure class="fig"><svg xmlns="http://www.w3.org/2000/svg" width="1180" height="250" viewBox="0 0 1180 250" font-family="Arial, Helvetica, sans-serif"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#9fb3ad"/></marker>
+  <marker id="aht" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#0b6e6e"/></marker>
+</defs><rect width="1180" height="250" rx="14" fill="#eef3f1"/><text x="26" y="34" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#1f2a44" text-anchor="start">Running the dockerised appliance</text><rect x="20" y="70" width="160" height="92" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="20" y="70" width="5" height="92" rx="2.5" fill="#0b6e6e"/><text x="100" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Install Docker</text><text x="100" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Desktop (once)</text><circle cx="40" cy="68" r="15" fill="#0b6e6e"/><text x="40" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">1</text><line x1="186" y1="116" x2="210" y2="116" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="216" y="70" width="160" height="92" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="216" y="70" width="5" height="92" rx="2.5" fill="#0b6e6e"/><text x="296" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Double-click</text><text x="296" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Start</text><circle cx="236" cy="68" r="15" fill="#0b6e6e"/><text x="236" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">2</text><line x1="382" y1="116" x2="406" y2="116" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="412" y="70" width="160" height="92" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="412" y="70" width="5" height="92" rx="2.5" fill="#0b6e6e"/><text x="492" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Pull images</text><text x="492" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">first run, a few GB</text><circle cx="432" cy="68" r="15" fill="#0b6e6e"/><text x="432" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">3</text><line x1="578" y1="116" x2="602" y2="116" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="608" y="70" width="160" height="92" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="608" y="70" width="5" height="92" rx="2.5" fill="#0b6e6e"/><text x="688" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Upload 5 CSVs</text><text x="688" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">in the mapper</text><circle cx="628" cy="68" r="15" fill="#0b6e6e"/><text x="628" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">4</text><line x1="774" y1="116" x2="798" y2="116" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="804" y="70" width="160" height="92" rx="10" ry="10" fill="#ffffff" stroke="#cdd6d2" stroke-width="1.6"/><rect x="804" y="70" width="5" height="92" rx="2.5" fill="#0b6e6e"/><text x="884" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Build the</text><text x="884" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">OMOP CDM</text><circle cx="824" cy="68" r="15" fill="#0b6e6e"/><text x="824" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">5</text><line x1="970" y1="116" x2="994" y2="116" stroke="#0b6e6e" stroke-width="2" marker-end="url(#aht)"/><rect x="1000" y="70" width="160" height="92" rx="10" ry="10" fill="#dfeeec" stroke="#cdd6d2" stroke-width="1.6"/><rect x="1000" y="70" width="5" height="92" rx="2.5" fill="#0a5a5a"/><text x="1080" y="114.5" font-family="Arial, Helvetica, sans-serif" font-size="15.5" font-weight="700" fill="#1f2a44" text-anchor="middle">Explore or</text><text x="1080" y="134.5" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#5a6472" text-anchor="middle">Start-research</text><circle cx="1020" cy="68" r="15" fill="#0b6e6e"/><text x="1020" y="73" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">6</text><text x="590" y="232" font-family="Arial, Helvetica, sans-serif" font-size="12.5" font-weight="600" fill="#5a6472" text-anchor="middle">RStudio (:8787) and JupyterLab (:8888) open with Start-research, preconnected to the CDM.</text></svg><figcaption>Running the sealed appliance: install Docker, double-click Start, map and build, then explore or open the research tools.</figcaption></figure>
+    <h3>The turnkey appliance (recommended)</h3>
+    <p>A sealed, double-click deployment requiring only Docker Desktop. Unzip the starter package and double-click <strong>Start</strong>; a browser opens the mapper. No repository, no code, no login, the images pull from a public registry on first run.</p>
+    <ul>
+      <li><strong>Start</strong> → the mapper opens.</li>
+      <li><strong>Map &amp; build</strong> → upload the five CSVs, validate, click Build, download the OMOP tables.</li>
+      <li><strong>Explore</strong> → the dashboard (overview, pathways, cohort builder, query builder, SQL console) opens alongside.</li>
+      <li><strong>Analyse with code</strong> → double-click <strong>Start-research</strong> for RStudio Server and JupyterLab, preconnected to the CDM.</li>
+      <li><strong>Stop / Update</strong> → Stop keeps the database; Update pulls the newest image.</li>
+    </ul>
+    <h3>The developer route</h3>
+    <p>The same pipeline runs from the repository: a PostgreSQL database with the vocabulary loaded, the Python ETL in stages (<code>staging → vocab → cdm</code>) with the derived tables built automatically, the R steps for observation_period and the DQD, and the Dash dashboard over the result.</p>
+    <h3>The research workbench</h3>
+    <p>This is where an external OHDSI study runs against the data. RStudio Server is the native home for an R study package; JupyterLab offers the same connection in Python or R. Both read the connection from the environment, so a researcher opens a seeded script and runs it with no configuration. Because they execute arbitrary code against the CDM, they are login-gated, and any external study package is reviewed before it is run.</p>
+
+    <h2 id="quality"><span class="n">11</span>Data quality &amp; known limitations</h2>
+    <p>The built CDM passes the OHDSI Data Quality Dashboard's checks, which can be re-run on demand from the mapper. Limitations worth stating plainly:</p>
+    <ul>
+      <li>Externally delivered radiotherapy may be under-recorded if provided at non-participating centres (Q&amp;A 10).</li>
+      <li>ADT is captured only as "Chemical", without a specific agent, dose or date (Q&amp;A 9).</li>
+      <li>Some baseline characteristics (smoking, family history) are affected by a date-semantics question until an assessment date is confirmed (Q&amp;A 1).</li>
+      <li>The active-surveillance vs watchful-waiting distinction is absent from this extract (Q&amp;A 8).</li>
+      <li>The extract is a mid-compilation snapshot; some missingness is maturation, not error, and flagged records will be re-dated when IPCOR supplies a single synchronised extract.</li>
+    </ul>
+    <p>None of these are defects in the mapping; they are properties of the current source extract, documented so analysis is interpreted correctly.</p>
+
+    <h2 id="synthetic"><span class="n">12</span>Synthetic data for safe testing</h2>
+    <p>So collaborators can develop and test analysis code before any real data is involved, the pipeline includes a synthetic-cohort generator. It produces a clinically coherent prostate-cancer cohort in the exact IPCOR source format, from the structure and the mapping vocabularies alone, it never reads the real data. Each synthetic patient is simulated from clinical priors, so no row corresponds to a real person, and the cohort is built to <strong>mirror the concept coverage of the real CDM</strong>, so code that runs against the synthetic data will run against the real data. A collaborator builds and tests their study on the synthetic cohort on their own machine; only the finished code is later run against the real data locally.</p>
+
+    <h2 id="ack"><span class="n">13</span>Acknowledgements</h2>
+    <p>This work was carried out by the eHealth-Hub for Cancer, with the support and clarifications of the IPCOR team.</p>
+    <ul>
+      <li><strong>Supervisors:</strong> Katie Crowley and Amir Jalali.</li>
+      <li><strong>Author, mapping &amp; tooling:</strong> Jeremiah Akintomide.</li>
+      <li><strong>Collaborators:</strong> Mohsin, and the entire IPCOR team, for their input and for working through the data-quality questions.</li>
+    </ul>
+    <p class="fund">The eHealth-Hub for Cancer is a Strand II project funded under the North South Research Programme (NSRP). The NSRP is a collaborative scheme funded through the Government's Shared Island Fund. It is being administered by the Higher Education Authority (HEA) on behalf of the Department of Further and Higher Education, Research, Innovation and Science.</p>
+    <p>Project website: <a href="https://ehealth4cancer.ie/">ehealth4cancer.ie</a>. The code repository is currently private; the author is happy to grant read access on request, <a href="mailto:akintomide.jeremiah@ul.ie">akintomide.jeremiah@ul.ie</a>.</p>
+
+    <h2 id="glossary"><span class="n">14</span>Glossary</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>OMOP CDM</td><td>The OHDSI standard structure for observational health data (v5.4 here).</td></tr>
+        <tr><td>OHDSI</td><td>The community that maintains OMOP and its tools.</td></tr>
+        <tr><td>Concept / <code>concept_id</code></td><td>An entry in the OMOP vocabulary; a "standard" concept is the canonical one analyses use.</td></tr>
+        <tr><td>SNOMED / LOINC / RxNorm</td><td>Source vocabularies inside OMOP, clinical findings, measurements, drugs.</td></tr>
+        <tr><td>Athena</td><td>The OHDSI vocabulary repository from which standard concepts are obtained.</td></tr>
+        <tr><td>WhiteRabbit</td><td>OHDSI tool that profiles a source database into a scan report.</td></tr>
+        <tr><td>Rabbit-in-a-Hat</td><td>OHDSI tool for designing the source-to-CDM ETL, table by table.</td></tr>
+        <tr><td>Usagi</td><td>OHDSI tool for mapping source values to standard concepts.</td></tr>
+        <tr><td>source_to_concept_map</td><td>The OMOP format recording how a source value maps to a concept.</td></tr>
+        <tr><td>DQD</td><td>OHDSI Data Quality Dashboard, standard conformance/completeness/plausibility checks.</td></tr>
+        <tr><td>Era</td><td>A roll-up of repeated condition/drug records into continuous periods (30-day gap rule).</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="varlist"><span class="n">15</span>Appendix: variable-level mapping</h2>
+    <p>Every core clinical source variable across the four files (demo-diagnosis, biopsy, sub-form, treatment; PROMs excluded), with its OMOP target and status. Repeated instances of a variable are listed once, giving 139 distinct variables.</p>
+    <div class="tablewrap"><table><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody><tr><td>Converted</td><td>101</td></tr><tr><td>Represented (no standard concept; kept as source value)</td><td>17</td></tr><tr><td>Pre-wired (not populated in this extract)</td><td>20</td></tr><tr><td>Pending clarification</td><td>1</td></tr></tbody></table></div>
+    <h3>Converted (101)</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Source variable</th><th>File</th><th>OMOP table</th><th>OMOP concept</th></tr></thead>
+      <tbody>
+        <tr><td><code>DiagInst</code></td><td>demo-diagnosis</td><td>CARE_SITE</td><td>Outpatient Visit</td></tr>
+        <tr><td><code>cod</code></td><td>demo-diagnosis</td><td>DEATH</td><td>Usagi/source_to_concept_map lookup</td></tr>
+        <tr><td><code>dod/cod</code></td><td>demo-diagnosis</td><td>DEATH</td><td>Registry</td></tr>
+        <tr><td><code>CribriformPatternPresent</code></td><td>demo-diagnosis</td><td>CONDITION_OCCURRENCE</td><td>Cribriform tumor pattern</td></tr>
+        <tr><td><code>DiagMorph1</code></td><td>demo-diagnosis</td><td>CONDITION_OCCURRENCE</td><td>Adenocarcinoma of prostate</td></tr>
+        <tr><td><code>DiagMorph2</code></td><td>demo-diagnosis</td><td>CONDITION_OCCURRENCE</td><td>Intraductal carcinoma, noninfiltrating, NOS, of prostate gland</td></tr>
+        <tr><td><code>ExtProsYN</code></td><td>demo-diagnosis</td><td>CONDITION_OCCURRENCE</td><td>Extraprostatic extension of tumor present</td></tr>
+        <tr><td><code>LymvasYN</code></td><td>demo-diagnosis</td><td>CONDITION_OCCURRENCE</td><td>Lymphatic (small vessel) invasion by tumor present</td></tr>
+        <tr><td><code>PeriNeuYN</code></td><td>demo-diagnosis</td><td>CONDITION_OCCURRENCE</td><td>Perineural invasion by tumor present</td></tr>
+        <tr><td><code>SVInvYN</code></td><td>demo-diagnosis</td><td>CONDITION_OCCURRENCE</td><td>Seminal vesicle invasion by tumor present</td></tr>
+        <tr><td><code>CAPRA</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Prostate cancer risk [Likelihood]</td></tr>
+        <tr><td><code>DiagcM</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>TNM Path M</td></tr>
+        <tr><td><code>DiagcN</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>TNM Path N</td></tr>
+        <tr><td><code>DiagCoresInvol</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Percentage of prostatic tissue, obtained by needle biopsy, involved by carcinoma</td></tr>
+        <tr><td><code>DiagCoresPerPos</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Percentage of prostatic tissue, obtained by needle biopsy, involved by carcinoma</td></tr>
+        <tr><td><code>DiagCoresPos</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Number of tissue cores positive for carcinoma</td></tr>
+        <tr><td><code>DiagCoresTot</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Number of Cores Examined</td></tr>
+        <tr><td><code>DiagcT</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>TNM Path T</td></tr>
+        <tr><td><code>DiagGle1</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Gleason pattern.primary in Prostate tumor</td></tr>
+        <tr><td><code>DiagGle2</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Gleason pattern.secondary in Prostate tumor</td></tr>
+        <tr><td><code>DiagGleSum</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Gleason score in Specimen Qualitative</td></tr>
+        <tr><td><code>DiagISUP</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Prostate cancer grade group [Score] in Prostate tumor Qualitative</td></tr>
+        <tr><td><code>NCCN</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Prostate cancer risk [Likelihood]</td></tr>
+        <tr><td><code>NCCN_Latest</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Prostate cancer risk [Likelihood]</td></tr>
+        <tr><td><code>PatternPercent</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Percentage of primary malignant neoplasm of prostate with Gleason histologic pattern 4</td></tr>
+        <tr><td><code>PRIAS</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Prostate cancer risk [Likelihood]</td></tr>
+        <tr><td><code>PSADensity</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Prostate specific Ag/Prostate volume calculated</td></tr>
+        <tr><td><code>PSAVolume</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>Volume of prostate</td></tr>
+        <tr><td><code>TNMstage</code></td><td>demo-diagnosis</td><td>MEASUREMENT</td><td>TNM Path Stage Group</td></tr>
+        <tr><td><code>ClinTYN</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>T category</td></tr>
+        <tr><td><code>DiagMRIStatus</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Other MRI scan [PhenX]</td></tr>
+        <tr><td><code>DiagPSAStatus</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Prostate specific antigen measurement status</td></tr>
+        <tr><td><code>familyAge</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Age at event onset Family member</td></tr>
+        <tr><td><code>familyDegree</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Family history of clinical finding</td></tr>
+        <tr><td><code>ptSmoking</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Smoking status</td></tr>
+        <tr><td><code>Stagschadd</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Edition of American Joint Committee on Cancer TNM staging system manual</td></tr>
+        <tr><td><code>DiagMeth</code></td><td>demo-diagnosis</td><td>PROCEDURE_OCCURRENCE</td><td>Transrectal biopsy of prostate using ultrasound guidance</td></tr>
+        <tr><td><code>DiagRdBone</code></td><td>demo-diagnosis</td><td>PROCEDURE_OCCURRENCE</td><td>Radioisotope scan of bone</td></tr>
+        <tr><td><code>DiagRdCT</code></td><td>demo-diagnosis</td><td>PROCEDURE_OCCURRENCE</td><td>CT prostate</td></tr>
+        <tr><td><code>DiagRdOther</code></td><td>demo-diagnosis</td><td>PROCEDURE_OCCURRENCE</td><td>Radiographic imaging procedure</td></tr>
+        <tr><td><code>DiagRdPet</code></td><td>demo-diagnosis</td><td>PROCEDURE_OCCURRENCE</td><td>Positron emission tomography with computed tomography</td></tr>
+        <tr><td><code>DiagRdPSMA</code></td><td>demo-diagnosis</td><td>PROCEDURE_OCCURRENCE</td><td>PET CT Ga68 PSMA imaging of cranial vertex to mid-thigh</td></tr>
+        <tr><td><code>PrefLan</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Preferred language</td></tr>
+        <tr><td><code>biopsyinst</code></td><td>biopsy</td><td>CARE_SITE</td><td>Outpatient Visit</td></tr>
+        <tr><td><code>clinintype1</code></td><td>biopsy</td><td>PROCEDURE_OCCURRENCE</td><td>Radioisotope scan of bone</td></tr>
+        <tr><td><code>clinintype2</code></td><td>biopsy</td><td>PROCEDURE_OCCURRENCE</td><td>Multiparametric magnetic resonance imaging</td></tr>
+        <tr><td><code>clinintype3</code></td><td>biopsy</td><td>PROCEDURE_OCCURRENCE</td><td>CT prostate</td></tr>
+        <tr><td><code>clinintype4</code></td><td>biopsy</td><td>PROCEDURE_OCCURRENCE</td><td>Radiographic imaging procedure</td></tr>
+        <tr><td><code>clinintype5</code></td><td>biopsy</td><td>PROCEDURE_OCCURRENCE</td><td>Positron emission tomography with computed tomography</td></tr>
+        <tr><td><code>clinintype6</code></td><td>biopsy</td><td>PROCEDURE_OCCURRENCE</td><td>Ultrasonography</td></tr>
+        <tr><td><code>tumourpresyn</code></td><td>biopsy</td><td>PROCEDURE_OCCURRENCE</td><td>Biopsy of prostate</td></tr>
+        <tr><td><code>psadensity</code></td><td>biopsy</td><td>MEASUREMENT</td><td>Prostate specific Ag/Prostate volume calculated</td></tr>
+        <tr><td><code>psavolume</code></td><td>biopsy</td><td>MEASUREMENT</td><td>Volume of prostate</td></tr>
+        <tr><td><code>diaggle1</code></td><td>biopsy</td><td>MEASUREMENT</td><td>Gleason pattern.primary in Prostate tumor</td></tr>
+        <tr><td><code>diaggle2</code></td><td>biopsy</td><td>MEASUREMENT</td><td>Gleason pattern.secondary in Prostate tumor</td></tr>
+        <tr><td><code>diagglesum</code></td><td>biopsy</td><td>MEASUREMENT</td><td>Gleason score in Specimen Qualitative</td></tr>
+        <tr><td><code>psastatus</code></td><td>biopsy</td><td>OBSERVATION</td><td>Prostate specific antigen measurement status</td></tr>
+        <tr><td><code>mristatus</code></td><td>biopsy</td><td>OBSERVATION</td><td>Other MRI scan [PhenX]</td></tr>
+        <tr><td><code>diagscryn</code></td><td>biopsy</td><td>OBSERVATION</td><td>Cancer detection basis</td></tr>
+        <tr><td><code>laterality</code></td><td>biopsy</td><td>OBSERVATION</td><td>Specimen laterality</td></tr>
+        <tr><td><code>curca2</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Malignant neoplastic disease</td></tr>
+        <tr><td><code>curca3</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Malignant neoplasm of brain</td></tr>
+        <tr><td><code>curca4</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Sarcoma</td></tr>
+        <tr><td><code>curca5</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Malignant tumor of colon</td></tr>
+        <tr><td><code>curca6</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Malignant tumor of thyroid gland</td></tr>
+        <tr><td><code>curca7</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Malignant tumor of kidney</td></tr>
+        <tr><td><code>curca8</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Primary malignant neoplasm of liver</td></tr>
+        <tr><td><code>curca9</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Primary malignant neoplasm of lung</td></tr>
+        <tr><td><code>curca10</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Malignant melanoma of skin</td></tr>
+        <tr><td><code>curca11</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Malignant tumor of testis</td></tr>
+        <tr><td><code>curca12</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Malignant neoplastic disease</td></tr>
+        <tr><td><code>curca13</code></td><td>biopsy</td><td>CONDITION_OCCURRENCE</td><td>Malignant neoplastic disease</td></tr>
+        <tr><td><code>asdt</code></td><td>biopsy</td><td>PROCEDURE_OCCURRENCE</td><td>Biopsy of prostate</td></tr>
+        <tr><td><code>psalev</code></td><td>sub-form</td><td>MEASUREMENT</td><td>Prostate specific Ag [Mass/volume] in Serum or Plasma</td></tr>
+        <tr><td><code>pirads</code></td><td>sub-form</td><td>MEASUREMENT</td><td>Prostate Imaging-Reporting and Data System</td></tr>
+        <tr><td><code>length</code></td><td>sub-form</td><td>MEASUREMENT</td><td>Prostate Length by US</td></tr>
+        <tr><td><code>width</code></td><td>sub-form</td><td>MEASUREMENT</td><td>Prostate Width by US</td></tr>
+        <tr><td><code>height</code></td><td>sub-form</td><td>MEASUREMENT</td><td>Prostate Height by US</td></tr>
+        <tr><td><code>volume</code></td><td>sub-form</td><td>MEASUREMENT</td><td>Volume of prostate</td></tr>
+        <tr><td><code>rttype</code></td><td>treatment</td><td>PROCEDURE_OCCURRENCE</td><td>External beam radiation therapy procedure</td></tr>
+        <tr><td><code>surtype</code></td><td>treatment</td><td>PROCEDURE_OCCURRENCE</td><td>Robot assisted laparoscopic radical prostatectomy</td></tr>
+        <tr><td><code>surgle1</code></td><td>treatment</td><td>MEASUREMENT</td><td>Gleason pattern.primary in Prostate tumor</td></tr>
+        <tr><td><code>surgle2</code></td><td>treatment</td><td>MEASUREMENT</td><td>Gleason pattern.secondary in Prostate tumor</td></tr>
+        <tr><td><code>surter</code></td><td>treatment</td><td>MEASUREMENT</td><td>Gleason Tertiary Pattern</td></tr>
+        <tr><td><code>surt</code></td><td>treatment</td><td>MEASUREMENT</td><td>TNM Path T</td></tr>
+        <tr><td><code>surn</code></td><td>treatment</td><td>MEASUREMENT</td><td>TNM Path N</td></tr>
+        <tr><td><code>surmar</code></td><td>treatment</td><td>MEASUREMENT</td><td>Surgical margin finding</td></tr>
+        <tr><td><code>rtpsastatus</code></td><td>treatment</td><td>OBSERVATION</td><td>Ever had prostate specific antigen (PSA) test</td></tr>
+        <tr><td><code>surpsastatus</code></td><td>treatment</td><td>OBSERVATION</td><td>Ever had prostate specific antigen (PSA) test</td></tr>
+        <tr><td><code>rtdose</code></td><td>treatment</td><td>MEASUREMENT</td><td>Total radiation dose delivered</td></tr>
+        <tr><td><code>rtfrac</code></td><td>treatment</td><td>OBSERVATION</td><td>Number of fractions</td></tr>
+        <tr><td><code>surglesum</code></td><td>treatment</td><td>MEASUREMENT</td><td>Gleason score in Specimen Qualitative</td></tr>
+        <tr><td><code>surepinv</code></td><td>treatment</td><td>CONDITION_OCCURRENCE</td><td>Extraprostatic extension of tumor present</td></tr>
+        <tr><td><code>sursvinv</code></td><td>treatment</td><td>CONDITION_OCCURRENCE</td><td>Seminal vesicle invasion by tumor present</td></tr>
+        <tr><td><code>tnmgroup</code></td><td>treatment</td><td>MEASUREMENT</td><td>TNM stage</td></tr>
+        <tr><td><code>adttype</code></td><td>treatment</td><td>PROCEDURE_OCCURRENCE</td><td>Total orchidectomy</td></tr>
+        <tr><td><code>cheyn</code></td><td>treatment</td><td>PROCEDURE_OCCURRENCE</td><td>Chemotherapy</td></tr>
+        <tr><td><code>adtcheagent</code></td><td>treatment</td><td>DRUG_EXPOSURE</td><td>RxNorm ingredient via crosswalk</td></tr>
+        <tr><td><code>cheagent</code></td><td>treatment</td><td>DRUG_EXPOSURE</td><td>RxNorm ingredient via crosswalk</td></tr>
+        <tr><td><code>wwastype</code></td><td>treatment</td><td>OBSERVATION</td><td>Active surveillance (temp; re-coded per value)</td></tr>
+        <tr><td><code>chestopreason</code></td><td>treatment</td><td>OBSERVATION</td><td>Reason for discontinuation of care plan</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Represented without a standard concept, value kept as source (17)</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Source variable</th><th>File</th><th>OMOP table</th><th>Reason / note</th></tr></thead>
+      <tbody>
+        <tr><td><code>ethnicity_concept_id</code></td><td>demo-diagnosis</td><td>PERSON</td><td>IPCOR ethnicity context is race/ancestry, not OMOP Hispanic/Latino ethnicity.</td></tr>
+        <tr><td><code>race_concept_id</code></td><td>demo-diagnosis</td><td>PERSON</td><td>No race source representation available in demo-diagnosis.</td></tr>
+        <tr><td><code>DiagClin</code></td><td>demo-diagnosis</td><td>PROVIDER</td><td>No specialty available.</td></tr>
+        <tr><td><code>ClinTOutcome</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Observation value stored in value_as_concept_id if mapped; original in value_source_value/value_as_string.</td></tr>
+        <tr><td><code>ClinTOutcomeOther</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Observation value stored in value_as_concept_id if mapped; original in value_source_value/value_as_string.</td></tr>
+        <tr><td><code>DiagRdBoneScanFindings</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Observation value stored in value_as_concept_id if mapped; original in value_source_value/value_as_string.</td></tr>
+        <tr><td><code>DiagRdCTFindings</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Observation value stored in value_as_concept_id if mapped; original in value_source_value/value_as_string.</td></tr>
+        <tr><td><code>DiagRdNo</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Observation value stored in value_as_concept_id if mapped; original in value_source_value/value_as_string.</td></tr>
+        <tr><td><code>DiagRdOtherFindings</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Observation value stored in value_as_concept_id if mapped; original in value_source_value/value_as_string.</td></tr>
+        <tr><td><code>DiagRdPetFindings</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Observation value stored in value_as_concept_id if mapped; original in value_source_value/value_as_string.</td></tr>
+        <tr><td><code>DiagRdPSMAFindings</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Observation value stored in value_as_concept_id if mapped; original in value_source_value/value_as_string.</td></tr>
+        <tr><td><code>DiagRdUnknown</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Observation value stored in value_as_concept_id if mapped; original in value_source_value/value_as_string.</td></tr>
+        <tr><td><code>rtclin</code></td><td>treatment</td><td>PROVIDER</td><td>Clinician code -&gt; provider_id via IDGenerator.provider_id (consistent hash). care_site via sub-form positional resolution; treatment institutes are multi-column + cross-cycle, so care_site may be null.</td></tr>
+        <tr><td><code>surclin</code></td><td>treatment</td><td>PROVIDER</td><td>Clinician code -&gt; provider_id via IDGenerator.provider_id (consistent hash). care_site via sub-form positional resolution; treatment institutes are multi-column + cross-cycle, so care_site may be null.</td></tr>
+        <tr><td><code>checlin</code></td><td>treatment</td><td>PROVIDER</td><td>Clinician code -&gt; provider_id via IDGenerator.provider_id (consistent hash). care_site via sub-form positional resolution; treatment institutes are multi-column + cross-cycle, so care_site may be null.</td></tr>
+        <tr><td><code>adtcln</code></td><td>treatment</td><td>PROVIDER</td><td>Clinician code -&gt; provider_id via IDGenerator.provider_id (consistent hash). care_site via sub-form positional resolution; treatment institutes are multi-column + cross-cycle, so care_site may be null.</td></tr>
+        <tr><td><code>asclin</code></td><td>treatment</td><td>PROVIDER</td><td>Clinician code -&gt; provider_id via IDGenerator.provider_id (consistent hash). care_site via sub-form positional resolution; treatment institutes are multi-column + cross-cycle, so care_site may be null.</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Pre-wired, not populated in this extract (20)</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Source variable</th><th>File</th><th>OMOP table</th><th>Reason / note</th></tr></thead>
+      <tbody>
+        <tr><td><code>Ethnicity</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Not in the current PhD extract (held back from cohort 1 for identifiability); pre-wired so the pipeline extends automatically when the column arrives. IPCOR ethnicity is race/ancestry, not OMOP Hispanic/Latino ethnicity;</td></tr>
+        <tr><td><code>County</code></td><td>demo-diagnosis</td><td>OBSERVATION</td><td>Not in the current PhD extract (held back from cohort 1 for identifiability); pre-wired so the pipeline extends automatically when the column arrives. County of residence kept in value_as_string. Canonical OMOP home is t</td></tr>
+        <tr><td><code>rtprimsalpal</code></td><td>treatment</td><td>OBSERVATION</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Treatment intent -&gt; value_as_concept_id.</td></tr>
+        <tr><td><code>adtprimsal</code></td><td>treatment</td><td>OBSERVATION</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Primary or Salvage -&gt; value_as_concept_id.</td></tr>
+        <tr><td><code>rtstopreason</code></td><td>treatment</td><td>OBSERVATION</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Reason for stopping treatment -&gt; value_as_concept_id.</td></tr>
+        <tr><td><code>adtstopreason</code></td><td>treatment</td><td>OBSERVATION</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Reason for stopping treatment -&gt; value_as_concept_id.</td></tr>
+        <tr><td><code>braprimsal</code></td><td>treatment</td><td>OBSERVATION</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Primary or Salvage -&gt; value_as_concept_id.</td></tr>
+        <tr><td><code>turpyn</code></td><td>treatment</td><td>PROCEDURE_OCCURRENCE</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. TURP procedure. Confirm the exact Yes token (Yes vs 1) against the real extract.</td></tr>
+        <tr><td><code>turpgle1</code></td><td>treatment</td><td>MEASUREMENT</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. TURP specimen primary Gleason pattern (numeric); mirrors surgery SurGle1.</td></tr>
+        <tr><td><code>turpgle2</code></td><td>treatment</td><td>MEASUREMENT</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. TURP specimen secondary Gleason pattern (numeric); mirrors surgery SurGle2.</td></tr>
+        <tr><td><code>turpglesum</code></td><td>treatment</td><td>MEASUREMENT</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Total Gleason score (6-10) at TURP; mirrors surgery SurGleSum.</td></tr>
+        <tr><td><code>brartdose</code></td><td>treatment</td><td>MEASUREMENT</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Brachytherapy total dose (Gy) as value_as_number; mirrors radiotherapy RtDose.</td></tr>
+        <tr><td><code>surpinv</code></td><td>treatment</td><td>MEASUREMENT</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Perineural invasion at prostatectomy (Cancer Modifier); present/absent -&gt; value_as_concept_id.</td></tr>
+        <tr><td><code>surlinv</code></td><td>treatment</td><td>MEASUREMENT</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Lymphovascular invasion at prostatectomy (Cancer Modifier); present/absent -&gt; value_as_concept_id.</td></tr>
+        <tr><td><code>pelviclymphdone</code></td><td>treatment</td><td>PROCEDURE_OCCURRENCE</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Pelvic lymph node dissection at prostatectomy. Confirm the Yes token against the real extract.</td></tr>
+        <tr><td><code>pelviclymphpos</code></td><td>treatment</td><td>MEASUREMENT</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Count of regional (pelvic) lymph nodes positive for cancer; value_as_number.</td></tr>
+        <tr><td><code>surnervespare</code></td><td>treatment</td><td>OBSERVATION</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Nerve-sparing status at prostatectomy. No standard OMOP concept; concept_id 0 with source value retained (design</td></tr>
+        <tr><td><code>foglyn</code></td><td>treatment</td><td>PROCEDURE_OCCURRENCE</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Focal-gland ablation of prostate procedure. FORM CODE &#x27;FOCALGLANDABLATIONTHERAPY&#x27; and the .1. instance are DERIV</td></tr>
+        <tr><td><code>foglprimsal</code></td><td>treatment</td><td>OBSERVATION</td><td>Not in the current PhD extract; pre-wired so the pipeline extends automatically when the column is present. Focal ablation primary/salvage intent -&gt; value_as_concept_id. FORM CODE &#x27;FOCALGLANDABLATIONTHERAPY&#x27; and the .1. </td></tr>
+        <tr><td><code>cheboneagentused</code></td><td>treatment</td><td>DRUG_EXPOSURE</td><td>Not in the current PhD extract; pre-wired. Bone-protecting agent given with chemotherapy. drug_concept_id via source_to_concept_map; only Zoledronic Acid is in the current dictionary value list - add others (e.g. denosum</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Pending clarification (1)</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Source variable</th><th>File</th><th>OMOP table</th><th>Reason / note</th></tr></thead>
+      <tbody>
+        <tr><td><code>mridetails</code></td><td>biopsy</td><td>OBSERVATION</td><td>observation_type_concept_id = 32817; value_as_concept_id = 0; value_as_string = original local code; observation_source_value = source column name; value_source_value = original value.</td></tr>
+      </tbody>
+    </table></div>
+
+    <footer>
+      <p>IPCOR → OMOP CDM v5.4 · Mapping Process Documentation · Version 1.0 · 26 November 2026<br>
+      eHealth-Hub for Cancer · <a href="https://ehealth4cancer.ie/">ehealth4cancer.ie</a> · akintomide.jeremiah@ul.ie</p>
+    </footer>
+  </main>
+</div>
+
+<script>
+  // Mobile contents toggle
+  var btn = document.getElementById('menubtn'), toc = document.getElementById('toc');
+  btn.addEventListener('click', function(){
+    var open = toc.classList.toggle('show');
+    btn.setAttribute('aria-expanded', open);
+    btn.textContent = open ? 'Contents ▴' : 'Contents ▾';
+  });
+  toc.addEventListener('click', function(e){ if(e.target.tagName==='A' && window.innerWidth<=880){ toc.classList.remove('show'); btn.textContent='Contents ▾'; }});
+  // Scrollspy: highlight the section currently in view
+  var links = Array.prototype.slice.call(toc.querySelectorAll('a'));
+  var map = {}; links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var spy = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){ links.forEach(function(a){a.classList.remove('on');}); var m = map[en.target.id]; if(m) m.classList.add('on'); }
+    });
+  }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+  document.querySelectorAll('main h2[id]').forEach(function(h){ spy.observe(h); });
+</script>
