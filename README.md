@@ -4,7 +4,7 @@ Project documentation for the standardisation of the IPCOR prostate-cancer
 registry to the OMOP Common Data Model (v5.4), part of the **eHealth-Hub for
 Cancer**.
 
-**Live site:** https://profjay22.github.io/ipcor-omop-mapping-docs/
+**Live site:** https://ehealthhub4cancer.github.io/ipcor-omop-mapping-docs/
 
 This repository holds the documentation only. The mapping pipeline is kept in a
 separate repository, which is currently private; read access is available on
